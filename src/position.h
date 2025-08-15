@@ -56,6 +56,7 @@ struct StateInfo {
   Square castlingKingSquare[COLOR_NB];
   Bitboard wallSquares;
   Bitboard gatesBB[COLOR_NB];
+  Move   bannedMove;  // Ban Chess: currently banned move for this turn
 
   // Not copied when making a move (will be recomputed anyhow)
   Key        key;

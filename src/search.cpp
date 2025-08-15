@@ -61,7 +61,8 @@ using namespace Search;
 namespace {
 
   // Different node types, used as a template parameter
-  enum NodeType { NonPV, PV, Root };
+  // Use the enum from Search namespace to avoid duplication
+  using namespace Search;
 
   constexpr uint64_t TtHitAverageWindow     = 4096;
   constexpr uint64_t TtHitAverageResolution = 1024;
@@ -106,6 +107,11 @@ namespace {
 
   template <NodeType nodeType>
   Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode);
+
+  // Non-template wrapper to avoid ambiguity with Thread::search()
+  inline Value searchRoot(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, bool cutNode) {
+      return search<Root>(pos, ss, alpha, beta, depth, cutNode);
+  }
 
   template <NodeType nodeType>
   Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth = 0);
@@ -440,7 +446,8 @@ void Thread::search() {
           while (true)
           {
               Depth adjustedDepth = std::max(1, rootDepth - failedHighCnt - searchAgainCounter);
-              bestValue = Stockfish::search<Root>(rootPos, ss, alpha, beta, adjustedDepth, false);
+              // Call searchRoot wrapper function (avoids ambiguity with Thread::search())
+              bestValue = searchRoot(rootPos, ss, alpha, beta, adjustedDepth, false);
 
               // Bring the best move to the front. It is critical that sorting
               // is done with a stable algorithm because all the values but the
@@ -2137,6 +2144,35 @@ void Tablebases::rank_root_moves(Position& pos, Search::RootMoves& rootMoves) {
         for (auto& m : rootMoves)
             m.tbRank = 0;
     }
+}
+
+// Ban Chess specific: Select the best move to ban for the opponent
+Move select_ban_move(Position& pos, int searchDepth) {
+    // Simple implementation: evaluate opponent's moves and ban their best one
+    MoveList<LEGAL> moves(pos);
+    
+    if (moves.size() == 0)
+        return MOVE_NONE;
+    
+    Move bestMove = MOVE_NONE;
+    Value bestValue = -VALUE_INFINITE;
+    
+    StateInfo st;
+    for (const auto& m : moves) {
+        pos.do_move(m, st);
+        
+        // Simple evaluation - just use static eval for now
+        Value value = -Eval::evaluate(pos);
+        
+        if (value > bestValue) {
+            bestValue = value;
+            bestMove = m;
+        }
+        
+        pos.undo_move(m);
+    }
+    
+    return bestMove;
 }
 
 } // namespace Stockfish

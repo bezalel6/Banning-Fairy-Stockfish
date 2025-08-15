@@ -620,6 +620,7 @@ void Position::set_state(StateInfo* si) const {
   si->nonPawnMaterial[WHITE] = si->nonPawnMaterial[BLACK] = VALUE_ZERO;
   si->checkersBB = count<KING>(sideToMove) ? attackers_to(square<KING>(sideToMove), ~sideToMove) : Bitboard(0);
   si->move = MOVE_NONE;
+  si->bannedMove = MOVE_NONE;  // Initialize Ban Chess banned move field
 
   set_check_info(si);
 

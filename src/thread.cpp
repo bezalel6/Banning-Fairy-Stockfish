@@ -127,6 +127,7 @@ void Thread::idle_loop() {
 
       lk.unlock();
 
+      sync_cout << "info string idle_loop calling search(), Threads.stop=" << Threads.stop << sync_endl;
       search();
   }
 }

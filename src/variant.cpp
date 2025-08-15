@@ -72,6 +72,12 @@ namespace {
         v->materialCounting = BLACK_DRAW_ODDS;
         return v;
     }
+    // Ban Chess
+    // Chess variant where opponent can ban one legal move each turn
+    Variant* banchess_variant() {
+        Variant* v = chess_variant()->init();
+        return v;
+    }
     // Torpedo Chess
     // https://arxiv.org/abs/2009.04374
     Variant* torpedo_variant() {
@@ -1830,6 +1836,7 @@ void VariantMap::init() {
     add("fischerandom", chess960_variant());
     add("nocastle", nocastle_variant());
     add("armageddon", armageddon_variant());
+    add("banchess", banchess_variant());
     add("torpedo", torpedo_variant());
     add("berolina", berolina_variant());
     add("pawnsideways", pawnsideways_variant());

@@ -31,6 +31,9 @@ class Position;
 
 namespace Search {
 
+/// Different node types, used as a template parameter
+enum NodeType { NonPV, PV, Root };
+
 /// Threshold used for countermoves based pruning
 constexpr int CounterMovePruneThreshold = 0;
 
@@ -108,6 +111,9 @@ void init();
 void clear();
 
 } // namespace Search
+
+/// Ban Chess related functions
+Move select_ban_move(Position& pos, int searchDepth = 2);
 
 } // namespace Stockfish
 
