@@ -183,6 +183,13 @@ void Search::clear() {
 
 void MainThread::search() {
 
+  // Fix: Ensure stop is false for real searches
+  // (stop might be left as true from thread initialization)
+  if (rootMoves.size() > 0 && (Limits.depth > 0 || Limits.movetime > 0 || Limits.nodes > 0 
+      || Limits.time[WHITE] > 0 || Limits.time[BLACK] > 0 || Limits.infinite || ponder)) {
+      Threads.stop = false;
+  }
+
   if (Limits.perft)
   {
       nodes = perft<true>(rootPos, Limits.perft);
@@ -389,6 +396,7 @@ void Thread::search() {
   trend = SCORE_ZERO;
 
   int searchAgainCounter = 0;
+  
 
   // Iterative deepening loop until requested to stop or the target depth is reached
   while (   ++rootDepth < MAX_PLY
@@ -664,6 +672,7 @@ namespace {
     constexpr bool PvNode = nodeType != NonPV;
     constexpr bool rootNode = nodeType == Root;
     const Depth maxNextDepth = rootNode ? depth : depth + 1;
+    
 
     // Check if we have an upcoming move which draws by repetition, or
     // if the opponent had an alternative move earlier to this position.
@@ -1116,17 +1125,6 @@ moves_loop: // When in check, search starts from here
       if (move == excludedMove)
           continue;
       
-      // Debug: show moves being considered at root
-      if (Options["UCI_Variant"] == "banchess") {
-          static int dbgCount = 0;
-          if (++dbgCount <= 10 && rootNode) {
-              sync_cout << "info string Considering root move: " << UCI::move(pos, move) << sync_endl;
-          }
-          if (dbgCount == 1) {
-              sync_cout << "info string Search variant check: rootNode=" << rootNode 
-                        << " depth=" << depth << " ply=" << ss->ply << sync_endl;
-          }
-      }
 
       // At root obey the "searchmoves" option and skip moves not listed in Root
       // Move List. As a consequence any illegal move is also skipped. In MultiPV
@@ -1297,15 +1295,7 @@ moves_loop: // When in check, search starts from here
       // Ban Chess special case: Check if opponent has only one legal move while in check
       // If so, we can ban it to win immediately
       std::string currentVariant = Options["UCI_Variant"];
-      if (rootNode && moveCount <= 5) {
-          sync_cout << "info string Root move " << moveCount << ": " << UCI::move(pos, move) 
-                    << " variant=" << currentVariant << sync_endl;
-      }
       if (currentVariant == "banchess") {
-          // Debug output for root moves in Ban Chess
-          if (rootNode && from_sq(move) == SQ_H5 && to_sq(move) == SQ_F7) {
-              sync_cout << "info string Evaluating h5f7 (Qxf7+) move - FOUND IT!" << sync_endl;
-          }
           
           // Check for checkmate-by-ban after this move
           if (pos.checkers()) {

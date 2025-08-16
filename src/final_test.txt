@@ -1,0 +1,20 @@
+uci
+setoption name UCI_Variant value banchess
+ucinewgame
+
+# Test 1: Starting position
+position startpos
+go depth 5
+
+# Test 2: Critical checkmate position
+position fen rnbqkbnr/1pppp1pp/4p3/p6Q/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 0 3
+go depth 10
+
+# Test 3: Ban command functionality
+position startpos
+selectban 2
+ban e2e4
+showbans
+unban
+
+quit
