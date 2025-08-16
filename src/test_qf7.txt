@@ -1,0 +1,5 @@
+uci
+setoption name UCI_Variant value banchess
+position startpos moves e2e4 e7e6 d1h5 a7a5
+go movetime 5000
+quit

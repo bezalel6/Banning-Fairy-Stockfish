@@ -1,0 +1,13 @@
+uci
+setoption name UCI_Variant value banchess
+position fen 7k/5Q2/8/8/8/8/8/7K w - - 0 1
+d
+showbans
+go depth 5
+position fen 7k/5Q2/8/8/8/8/8/7K w - - 0 1 moves f7g7
+d
+showbans
+ban h8g8
+showbans
+go depth 5
+quit

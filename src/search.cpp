@@ -446,6 +446,7 @@ void Thread::search() {
           while (true)
           {
               Depth adjustedDepth = std::max(1, rootDepth - failedHighCnt - searchAgainCounter);
+              
               // Call searchRoot wrapper function (avoids ambiguity with Thread::search())
               bestValue = searchRoot(rootPos, ss, alpha, beta, adjustedDepth, false);
 
@@ -1114,6 +1115,18 @@ moves_loop: // When in check, search starts from here
 
       if (move == excludedMove)
           continue;
+      
+      // Debug: show moves being considered at root
+      if (Options["UCI_Variant"] == "banchess") {
+          static int dbgCount = 0;
+          if (++dbgCount <= 10 && rootNode) {
+              sync_cout << "info string Considering root move: " << UCI::move(pos, move) << sync_endl;
+          }
+          if (dbgCount == 1) {
+              sync_cout << "info string Search variant check: rootNode=" << rootNode 
+                        << " depth=" << depth << " ply=" << ss->ply << sync_endl;
+          }
+      }
 
       // At root obey the "searchmoves" option and skip moves not listed in Root
       // Move List. As a consequence any illegal move is also skipped. In MultiPV
@@ -1280,6 +1293,65 @@ moves_loop: // When in check, search starts from here
 
       // Step 15. Make the move
       pos.do_move(move, st, givesCheck);
+
+      // Ban Chess special case: Check if opponent has only one legal move while in check
+      // If so, we can ban it to win immediately
+      std::string currentVariant = Options["UCI_Variant"];
+      if (rootNode && moveCount <= 5) {
+          sync_cout << "info string Root move " << moveCount << ": " << UCI::move(pos, move) 
+                    << " variant=" << currentVariant << sync_endl;
+      }
+      if (currentVariant == "banchess") {
+          // Debug output for root moves in Ban Chess
+          if (rootNode && from_sq(move) == SQ_H5 && to_sq(move) == SQ_F7) {
+              sync_cout << "info string Evaluating h5f7 (Qxf7+) move - FOUND IT!" << sync_endl;
+          }
+          
+          // Check for checkmate-by-ban after this move
+          if (pos.checkers()) {
+              MoveList<LEGAL> oppMoves(pos);
+              if (oppMoves.size() == 1) {
+                  // Checkmate by ban! Return mate score
+                  value = VALUE_MATE - ss->ply - 1;
+                  
+                  // For root moves, update the score
+                  if (rootNode) {
+                      sync_cout << "info string CHECKMATE BY BAN detected! Move " 
+                                << UCI::move(pos, move) << " leads to mate in 1" << sync_endl;
+                      RootMove& rm = *std::find(thisThread->rootMoves.begin(),
+                                              thisThread->rootMoves.end(), move);
+                      rm.score = value;
+                      rm.selDepth = 1;
+                      rm.pv.resize(1);
+                      rm.pv[0] = move;
+                  }
+                  
+                  // This is the best possible outcome
+                  if (value > bestValue) {
+                      bestValue = value;
+                      bestMove = move;
+                      
+                      if (PvNode) {
+                          if (value > alpha)
+                              alpha = value;
+                          update_pv(ss->pv, move, (ss+1)->pv);
+                      }
+                  }
+                  
+                  // If this is mate, no point searching further
+                  if (value >= beta || value >= VALUE_MATE_IN_MAX_PLY) {
+                      pos.undo_move(move);
+                      return value;
+                  }
+                  
+                  // We found checkmate, skip normal search
+                  pos.undo_move(move);
+                  
+                  // Skip to next move
+                  continue;
+              }
+      }
+      }
 
       // Step 16. Late moves reduction / extension (LMR, ~200 Elo)
       // We use various heuristics for the sons of a node after the first son has

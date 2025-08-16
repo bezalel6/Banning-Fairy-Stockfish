@@ -1,0 +1,5 @@
+uci
+setoption name UCI_Variant value banchess
+position fen rnbqkbnr/1pppp1pp/4p3/p6Q/4P3/8/PPPP1PPP/RNB1KBNR w KQkq - 0 3 moves h5f7
+perft 1
+quit
