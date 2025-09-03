@@ -621,7 +621,8 @@ void Position::set_state(StateInfo* si) const {
   si->checkersBB = count<KING>(sideToMove) ? attackers_to(square<KING>(sideToMove), ~sideToMove) : Bitboard(0);
   si->move = MOVE_NONE;
   si->currentBan = MOVE_NONE;
-  si->banChessPly = 0;
+  // Ban Chess starts at ply 1 (Black bans White's move)
+  si->banChessPly = is_ban_chess() ? 1 : 0;
 
   set_check_info(si);
 
@@ -3309,6 +3310,11 @@ bool Position::is_ban_chess() const {
 
 bool Position::is_ban_ply() const {
   if (!is_ban_chess()) return false;
+  // Ban Chess: odd plies are ban phases
+  // Ply 1: Black bans White's move
+  // Ply 2: White moves
+  // Ply 3: White bans Black's move
+  // Ply 4: Black moves
   return (st->banChessPly % 2) == 1;
 }
 

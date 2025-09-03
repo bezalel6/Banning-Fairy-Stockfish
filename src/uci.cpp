@@ -71,10 +71,18 @@ namespace {
     pos.set(variants.find(Options["UCI_Variant"])->second, fen, Options["UCI_Chess960"], &states->back(), Threads.main(), sfen);
 
     // Parse move list (if any)
+    // In Ban Chess, moves alternate between bans and actual moves
     while (is >> token && (m = UCI::to_move(pos, token)) != MOVE_NONE)
     {
         states->emplace_back();
-        pos.do_move(m, states->back());
+        
+        if (pos.is_ban_chess() && pos.is_ban_ply()) {
+            // This is a ban action
+            pos.do_ban(m, states->back());
+        } else {
+            // This is a regular move
+            pos.do_move(m, states->back());
+        }
     }
   }
 
