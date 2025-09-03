@@ -731,9 +731,12 @@ namespace {
         // Apply the best ban and return
         if (bestBan != MOVE_NONE && rootNode) {
             // Store the ban for UCI output
-            thisThread->rootMoves[0].pv.resize(1);
-            thisThread->rootMoves[0].pv[0] = bestBan;
-            thisThread->rootMoves[0].score = bestBanValue;
+            Thread* thisThread = pos.this_thread();
+            if (thisThread && !thisThread->rootMoves.empty()) {
+                thisThread->rootMoves[0].pv.resize(1);
+                thisThread->rootMoves[0].pv[0] = bestBan;
+                thisThread->rootMoves[0].score = bestBanValue;
+            }
         }
         
         return bestBanValue;

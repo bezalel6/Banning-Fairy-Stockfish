@@ -529,9 +529,14 @@ ExtMove* generate<LEGAL>(const Position& pos, ExtMove* moveList) {
       
       // Filter for legality (opponent's legal moves)
       while (cur != moveList) {
-          Position tempPos = pos;
-          tempPos.flip_side_to_move_for_ban();
-          if (!tempPos.legal(*cur) || tempPos.virtual_drop(*cur))
+          // Check legality with flipped side
+          Position& mutablePos2 = const_cast<Position&>(pos);
+          mutablePos2.flip_side_to_move_for_ban();
+          bool isLegal = pos.legal(*cur);
+          bool isVirtual = pos.virtual_drop(*cur);
+          mutablePos2.flip_side_to_move_for_ban();
+          
+          if (!isLegal || isVirtual)
               *cur = (--moveList)->move;
           else
               ++cur;
