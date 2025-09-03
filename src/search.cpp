@@ -694,6 +694,50 @@ namespace {
     assert(PvNode || (alpha == beta - 1));
     assert(0 < depth && depth < MAX_PLY);
     assert(!(PvNode && cutNode));
+    
+    // Ban Chess: Special handling for ban ply
+    if (pos.is_ban_chess() && pos.is_ban_ply()) {
+        // During ban ply, we select the opponent's move to ban
+        // We want to ban their best move (worst for us)
+        MoveList<LEGAL> moves(pos);
+        
+        if (moves.size() == 0)
+            return VALUE_DRAW;
+            
+        // If opponent has only one move and is in check, it's checkmate by ban
+        if (moves.size() == 1 && pos.checkers()) {
+            return VALUE_MATE - ss->ply;
+        }
+        
+        // Find the best move to ban (their best move)
+        Move bestBan = MOVE_NONE;
+        Value bestBanValue = -VALUE_INFINITE;
+        
+        for (const auto& m : moves) {
+            StateInfo banSt;
+            pos.do_ban(m, banSt);
+            
+            // Evaluate position after banning this move
+            Value v = -search<NonPV>(pos, ss+1, -beta, -alpha, depth-1, false);
+            
+            pos.undo_ban(m);
+            
+            if (v > bestBanValue) {
+                bestBanValue = v;
+                bestBan = m;
+            }
+        }
+        
+        // Apply the best ban and return
+        if (bestBan != MOVE_NONE && rootNode) {
+            // Store the ban for UCI output
+            thisThread->rootMoves[0].pv.resize(1);
+            thisThread->rootMoves[0].pv[0] = bestBan;
+            thisThread->rootMoves[0].score = bestBanValue;
+        }
+        
+        return bestBanValue;
+    }
 
     Move pv[MAX_PLY+1], capturesSearched[32], quietsSearched[64];
     StateInfo st;

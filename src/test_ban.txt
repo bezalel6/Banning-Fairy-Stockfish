@@ -1,0 +1,7 @@
+uci
+setoption name UCI_Variant value banchess
+isready
+position startpos
+d
+go depth 3
+quit

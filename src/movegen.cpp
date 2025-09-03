@@ -517,22 +517,37 @@ ExtMove* generate<LEGAL>(const Position& pos, ExtMove* moveList) {
   // Ban Chess: In ban ply, generate opponent's moves; in move ply, filter banned move
   if (pos.is_ban_chess() && pos.is_ban_ply()) {
       // Generate opponent's legal moves (for ban selection)
-      // We need to temporarily flip the position to generate opponent moves
-      // For now, we'll handle this in search instead
+      // Temporarily flip the side to generate opponent moves
+      Position& mutablePos = const_cast<Position&>(pos);
+      mutablePos.flip_side_to_move_for_ban();
+      
       moveList = pos.checkers() ? generate<EVASIONS    >(pos, moveList)
                                 : generate<NON_EVASIONS>(pos, moveList);
+      
+      // Flip back
+      mutablePos.flip_side_to_move_for_ban();
+      
+      // Filter for legality (opponent's legal moves)
+      while (cur != moveList) {
+          Position tempPos = pos;
+          tempPos.flip_side_to_move_for_ban();
+          if (!tempPos.legal(*cur) || tempPos.virtual_drop(*cur))
+              *cur = (--moveList)->move;
+          else
+              ++cur;
+      }
   }
   else {
       moveList = pos.checkers() ? generate<EVASIONS    >(pos, moveList)
                                 : generate<NON_EVASIONS>(pos, moveList);
+      
+      while (cur != moveList)
+          if (!pos.legal(*cur) || pos.virtual_drop(*cur) || 
+              (pos.is_ban_chess() && pos.is_move_ply() && *cur == pos.banned_move()))
+              *cur = (--moveList)->move;
+          else
+              ++cur;
   }
-  
-  while (cur != moveList)
-      if (!pos.legal(*cur) || pos.virtual_drop(*cur) || 
-          (pos.is_ban_chess() && pos.is_move_ply() && *cur == pos.banned_move()))
-          *cur = (--moveList)->move;
-      else
-          ++cur;
 
   return moveList;
 }
