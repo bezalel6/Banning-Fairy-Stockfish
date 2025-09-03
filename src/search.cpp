@@ -1292,56 +1292,6 @@ moves_loop: // When in check, search starts from here
       // Step 15. Make the move
       pos.do_move(move, st, givesCheck);
 
-      // Ban Chess special case: Check if opponent has only one legal move while in check
-      // If so, we can ban it to win immediately
-      std::string currentVariant = Options["UCI_Variant"];
-      if (currentVariant == "banchess") {
-          
-          // Check for checkmate-by-ban after this move
-          if (pos.checkers()) {
-              MoveList<LEGAL> oppMoves(pos);
-              if (oppMoves.size() == 1) {
-                  // Checkmate by ban! Return mate score
-                  value = VALUE_MATE - ss->ply - 1;
-                  
-                  // For root moves, update the score
-                  if (rootNode) {
-                      sync_cout << "info string CHECKMATE BY BAN detected! Move " 
-                                << UCI::move(pos, move) << " leads to mate in 1" << sync_endl;
-                      RootMove& rm = *std::find(thisThread->rootMoves.begin(),
-                                              thisThread->rootMoves.end(), move);
-                      rm.score = value;
-                      rm.selDepth = 1;
-                      rm.pv.resize(1);
-                      rm.pv[0] = move;
-                  }
-                  
-                  // This is the best possible outcome
-                  if (value > bestValue) {
-                      bestValue = value;
-                      bestMove = move;
-                      
-                      if (PvNode) {
-                          if (value > alpha)
-                              alpha = value;
-                          update_pv(ss->pv, move, (ss+1)->pv);
-                      }
-                  }
-                  
-                  // If this is mate, no point searching further
-                  if (value >= beta || value >= VALUE_MATE_IN_MAX_PLY) {
-                      pos.undo_move(move);
-                      return value;
-                  }
-                  
-                  // We found checkmate, skip normal search
-                  pos.undo_move(move);
-                  
-                  // Skip to next move
-                  continue;
-              }
-      }
-      }
 
       // Step 16. Late moves reduction / extension (LMR, ~200 Elo)
       // We use various heuristics for the sons of a node after the first son has
@@ -2206,35 +2156,6 @@ void Tablebases::rank_root_moves(Position& pos, Search::RootMoves& rootMoves) {
         for (auto& m : rootMoves)
             m.tbRank = 0;
     }
-}
-
-// Ban Chess specific: Select the best move to ban for the opponent
-Move select_ban_move(Position& pos, int searchDepth) {
-    // Simple implementation: evaluate opponent's moves and ban their best one
-    MoveList<LEGAL> moves(pos);
-    
-    if (moves.size() == 0)
-        return MOVE_NONE;
-    
-    Move bestMove = MOVE_NONE;
-    Value bestValue = -VALUE_INFINITE;
-    
-    StateInfo st;
-    for (const auto& m : moves) {
-        pos.do_move(m, st);
-        
-        // Simple evaluation - just use static eval for now
-        Value value = -Eval::evaluate(pos);
-        
-        if (value > bestValue) {
-            bestValue = value;
-            bestMove = m;
-        }
-        
-        pos.undo_move(m);
-    }
-    
-    return bestMove;
 }
 
 } // namespace Stockfish

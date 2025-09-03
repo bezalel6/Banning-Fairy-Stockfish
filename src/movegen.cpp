@@ -514,10 +514,22 @@ ExtMove* generate<LEGAL>(const Position& pos, ExtMove* moveList) {
 
   ExtMove* cur = moveList;
 
-  moveList = pos.checkers() ? generate<EVASIONS    >(pos, moveList)
-                            : generate<NON_EVASIONS>(pos, moveList);
+  // Ban Chess: In ban ply, generate opponent's moves; in move ply, filter banned move
+  if (pos.is_ban_chess() && pos.is_ban_ply()) {
+      // Generate opponent's legal moves (for ban selection)
+      // We need to temporarily flip the position to generate opponent moves
+      // For now, we'll handle this in search instead
+      moveList = pos.checkers() ? generate<EVASIONS    >(pos, moveList)
+                                : generate<NON_EVASIONS>(pos, moveList);
+  }
+  else {
+      moveList = pos.checkers() ? generate<EVASIONS    >(pos, moveList)
+                                : generate<NON_EVASIONS>(pos, moveList);
+  }
+  
   while (cur != moveList)
-      if (!pos.legal(*cur) || pos.virtual_drop(*cur))
+      if (!pos.legal(*cur) || pos.virtual_drop(*cur) || 
+          (pos.is_ban_chess() && pos.is_move_ply() && *cur == pos.banned_move()))
           *cur = (--moveList)->move;
       else
           ++cur;

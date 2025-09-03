@@ -127,15 +127,13 @@ namespace {
   // the thinking time and other parameters from the input string, then starts
   // the search.
 
-  void go(Position& pos, istringstream& is, StateListPtr& states, const std::vector<Move>& banmoves = {}) {
+  void go(Position& pos, istringstream& is, StateListPtr& states) {
 
     Search::LimitsType limits;
     string token;
     bool ponderMode = false;
 
     limits.startTime = now(); // As early as possible!
-
-    limits.banmoves = banmoves;
     bool isUsi = CurrentProtocol == USI;
     int secResolution = Options["usemillisec"] ? 1 : 1000;
 
@@ -307,8 +305,6 @@ void UCI::loop(int argc, char* argv[]) {
 
   // XBoard state machine
   XBoard::stateMachine = new XBoard::StateMachine(pos, states);
-  // UCCI banmoves state
-  std::vector<Move> banmoves = {};
 
   if (argc > 1 && (std::strcmp(argv[1], "noautoload") == 0))
   {
@@ -374,69 +370,8 @@ void UCI::loop(int argc, char* argv[]) {
           XBoard::stateMachine->process_command(token, is);
 
       else if (token == "setoption")  setoption(is);
-      // UCCI-specific banmoves command
-      else if (token == "banmoves")
-          while (is >> token)
-              banmoves.push_back(UCI::to_move(pos, token));
-      
-      // Ban Chess specific commands
-      else if (token == "selectban") {
-          // Engine should select a move to ban from opponent's legal moves
-          // This is used when engine is selecting which move to ban
-          int searchDepth = 2; // Default depth for ban selection
-          
-          // Read optional search depth parameter
-          string param;
-          if (is >> param) {
-              // Simple parsing without exceptions
-              int parsed = std::atoi(param.c_str());
-              if (parsed > 0) {
-                  searchDepth = std::max(1, std::min(parsed, 6)); // Limit depth
-              }
-          }
-          
-          Move banMove = select_ban_move(pos, searchDepth);
-          if (banMove != MOVE_NONE) {
-              banmoves.clear();
-              banmoves.push_back(banMove);
-              sync_cout << "banselected " << UCI::move(pos, banMove) << sync_endl;
-          } else {
-              sync_cout << "info string No moves available to ban" << sync_endl;
-          }
-      }
-      else if (token == "ban") {
-          // Receive ban selection from GUI/opponent
-          string moveStr;
-          if (is >> moveStr) {
-              Move m = UCI::to_move(pos, moveStr);
-              if (m != MOVE_NONE) {
-                  banmoves.clear();
-                  banmoves.push_back(m);
-                  sync_cout << "info string Move " << moveStr << " has been banned" << sync_endl;
-              }
-          }
-      }
-      else if (token == "unban") {
-          // Clear all banned moves
-          banmoves.clear();
-          sync_cout << "info string All bans cleared" << sync_endl;
-      }
-      else if (token == "showbans") {
-          // Display currently banned moves
-          sync_cout << "info string Banned moves: ";
-          if (banmoves.empty()) {
-              sync_cout << "none";
-          } else {
-              for (size_t i = 0; i < banmoves.size(); ++i) {
-                  if (i > 0) sync_cout << " ";
-                  sync_cout << UCI::move(pos, banmoves[i]);
-              }
-          }
-          sync_cout << sync_endl;
-      }
-      
-      else if (token == "go")         go(pos, is, states, banmoves);
-      else if (token == "position")   position(pos, is, states), banmoves.clear();
+      else if (token == "go")         go(pos, is, states);
+      else if (token == "position")   position(pos, is, states);
       else if (token == "ucinewgame" || token == "usinewgame" || token == "uccinewgame") Search::clear();
       else if (token == "isready")    sync_cout << "readyok" << sync_endl;
 

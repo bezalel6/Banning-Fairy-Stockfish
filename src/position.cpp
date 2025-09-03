@@ -620,7 +620,8 @@ void Position::set_state(StateInfo* si) const {
   si->nonPawnMaterial[WHITE] = si->nonPawnMaterial[BLACK] = VALUE_ZERO;
   si->checkersBB = count<KING>(sideToMove) ? attackers_to(square<KING>(sideToMove), ~sideToMove) : Bitboard(0);
   si->move = MOVE_NONE;
-  si->bannedMove = MOVE_NONE;  // Initialize Ban Chess banned move field
+  si->currentBan = MOVE_NONE;
+  si->banChessPly = 0;
 
   set_check_info(si);
 
@@ -1550,6 +1551,12 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
   st = &newSt;
   st->move = m;
 
+  // Ban Chess: Clear current ban and increment Ban Chess ply
+  if (is_ban_chess()) {
+      st->currentBan = MOVE_NONE;  // Clear the ban after making a move
+      st->banChessPly++;
+  }
+  
   // Increment ply counters. In particular, rule50 will be reset to zero later on
   // in case of a capture or a pawn move.
   ++gamePly;
@@ -3292,6 +3299,72 @@ bool Position::pos_is_ok() const {
       }
 
   return true;
+}
+
+/// Ban Chess specific implementations
+
+bool Position::is_ban_chess() const {
+  return var->banchess;
+}
+
+bool Position::is_ban_ply() const {
+  if (!is_ban_chess()) return false;
+  return (st->banChessPly % 2) == 1;
+}
+
+bool Position::is_move_ply() const {
+  if (!is_ban_chess()) return false;
+  return (st->banChessPly % 2) == 0;
+}
+
+Move Position::banned_move() const {
+  return st->currentBan;
+}
+
+int Position::ban_chess_ply() const {
+  return st->banChessPly;
+}
+
+/// Position::do_ban() applies a ban in Ban Chess
+void Position::do_ban(Move m, StateInfo& newSt) {
+  assert(is_ban_chess());
+  assert(is_ban_ply());
+  assert(m != MOVE_NONE);
+  
+  // Copy the old state
+  std::memcpy(&newSt, st, offsetof(StateInfo, checkersBB));
+  newSt.previous = st;
+  st = &newSt;
+  
+  // Store the ban
+  st->currentBan = m;
+  
+  // Increment Ban Chess ply (but not game ply)
+  st->banChessPly++;
+  
+  // Don't switch sides - the same player now makes a move
+  // The ban phase doesn't change the side to move
+  
+  // Update repetition info
+  st->repetition = 0;
+  
+  // Update the key to reflect the ban
+  st->key ^= Zobrist::side;  // Cancel out the side change that would normally happen
+}
+
+/// Position::undo_ban() takes back a ban
+void Position::undo_ban(Move m) {
+  assert(is_ban_chess());
+  assert(is_move_ply());  // We're in move phase after the ban
+  
+  st = st->previous;
+}
+
+/// Position::flip_side_to_move_for_ban() temporarily flips the side to move
+/// Used to generate opponent moves during ban phase
+void Position::flip_side_to_move_for_ban() {
+  sideToMove = ~sideToMove;
+  st->key ^= Zobrist::side;
 }
 
 } // namespace Stockfish

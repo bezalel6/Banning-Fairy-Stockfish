@@ -76,6 +76,7 @@ namespace {
     // Chess variant where opponent can ban one legal move each turn
     Variant* banchess_variant() {
         Variant* v = chess_variant()->init();
+        v->banchess = true;
         return v;
     }
     // Torpedo Chess

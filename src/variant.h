@@ -43,6 +43,7 @@ struct Variant {
   File maxFile = FILE_H;
   bool chess960 = false;
   bool twoBoards = false;
+  bool banchess = false;
   int pieceValue[PHASE_NB][PIECE_TYPE_NB] = {};
   std::string customPiece[CUSTOM_PIECES_NB] = {};
   PieceSet pieceTypes = CHESS_PIECES;

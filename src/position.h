@@ -56,7 +56,10 @@ struct StateInfo {
   Square castlingKingSquare[COLOR_NB];
   Bitboard wallSquares;
   Bitboard gatesBB[COLOR_NB];
-  Move   bannedMove;  // Ban Chess: currently banned move for this turn
+  
+  // Ban Chess fields
+  Move currentBan;    // Currently active ban (MOVE_NONE if in ban phase)
+  int banChessPly;    // Track Ban Chess ply (different from game ply)
 
   // Not copied when making a move (will be recomputed anyhow)
   Key        key;
@@ -270,6 +273,16 @@ public:
   Bitboard moves_from(Color c, PieceType pt, Square s) const;
   Bitboard slider_blockers(Bitboard sliders, Square s, Bitboard& pinners, Color c) const;
 
+  // Ban Chess specific methods
+  bool is_ban_chess() const;
+  bool is_ban_ply() const;
+  bool is_move_ply() const;
+  Move banned_move() const;
+  int ban_chess_ply() const;
+  void do_ban(Move m, StateInfo& newSt);
+  void undo_ban(Move m);
+  void flip_side_to_move_for_ban();
+  
   // Properties of moves
   bool legal(Move m) const;
   bool pseudo_legal(const Move m) const;

@@ -99,7 +99,7 @@ struct LimitsType {
     return time[WHITE] || time[BLACK];
   }
 
-  std::vector<Move> searchmoves, banmoves;
+  std::vector<Move> searchmoves;
   TimePoint time[COLOR_NB], inc[COLOR_NB], npmsec, movetime, startTime;
   int movestogo, depth, mate, perft, infinite;
   int64_t nodes;
@@ -111,9 +111,6 @@ void init();
 void clear();
 
 } // namespace Search
-
-/// Ban Chess related functions
-Move select_ban_move(Position& pos, int searchDepth = 2);
 
 } // namespace Stockfish
 

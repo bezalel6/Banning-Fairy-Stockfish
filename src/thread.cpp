@@ -190,8 +190,7 @@ void ThreadPool::start_thinking(Position& pos, StateListPtr& states,
   Search::RootMoves rootMoves;
 
   for (const auto& m : MoveList<LEGAL>(pos))
-      if (   (limits.searchmoves.empty() || std::count(limits.searchmoves.begin(), limits.searchmoves.end(), m))
-          && (limits.banmoves.empty() || !std::count(limits.banmoves.begin(), limits.banmoves.end(), m)))
+      if (   limits.searchmoves.empty() || std::count(limits.searchmoves.begin(), limits.searchmoves.end(), m))
           rootMoves.emplace_back(m);
 
   // Add virtual drops
